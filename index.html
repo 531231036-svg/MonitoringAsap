@@ -1,0 +1,584 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Air Quality Monitoring</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+header {
+    background: #102b46;
+    color: white;
+    padding: 25px 35px;
+}
+
+header h1 { font-size: 25px; }
+header p { color: #cbd5e1; margin-top: 8px; }
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 30px;
+}
+
+.login-box {
+    max-width: 400px;
+    margin: 70px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px #0002;
+}
+
+input {
+    width: 100%;
+    padding: 13px;
+    margin-top: 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    margin-top: 15px;
+}
+
+.login-box button { width: 100%; }
+
+#loginMessage {
+    margin-top: 12px;
+    color: #dc2626;
+    font-size: 13px;
+}
+
+#dashboard { display: none; }
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.status {
+    color: #16a34a;
+    font-weight: bold;
+    margin-top: 7px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+}
+
+.card {
+    background: white;
+    padding: 23px;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px #00000010;
+}
+
+.card h3 {
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 17px;
+}
+
+.value {
+    font-size: 27px;
+    font-weight: bold;
+    color: #2563eb;
+    overflow-wrap: anywhere;
+}
+
+.unit {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.condition {
+    font-size: 19px;
+    padding: 9px;
+    border-radius: 7px;
+    display: inline-block;
+}
+
+.normal {
+    color: #15803d;
+    background: #dcfce7;
+}
+
+.warning {
+    color: #b45309;
+    background: #fef3c7;
+}
+
+.danger {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.panel {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    margin-top: 23px;
+    box-shadow: 0 3px 12px #00000010;
+}
+
+.panel h2 { margin-bottom: 15px; }
+
+.chart-container { height: 300px; }
+
+.table-wrap {
+    overflow-x: auto;
+    margin-top: 18px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    white-space: nowrap;
+}
+
+th {
+    background: #102b46;
+    color: white;
+    padding: 14px;
+}
+
+td {
+    padding: 13px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+tbody tr:hover { background: #f8fafc; }
+
+.info {
+    line-height: 2;
+    color: #475569;
+}
+
+footer {
+    text-align: center;
+    padding: 25px;
+    color: #64748b;
+}
+
+@media(max-width: 850px) {
+    .cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media(max-width: 500px) {
+    .cards { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>AIR QUALITY MONITORING</h1>
+    <p>Dashboard Akuisisi Data Instrumentasi Elektronika</p>
+</header>
+
+<!-- HALAMAN LOGIN -->
+<div class="login-box" id="loginBox">
+    <h2>Login Monitoring</h2>
+    <p style="color:#64748b;margin-top:8px">
+        Masuk menggunakan akun Firebase
+    </p>
+
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+
+    <button id="loginButton">LOGIN</button>
+    <p id="loginMessage"></p>
+</div>
+
+<!-- DASHBOARD -->
+<div class="container" id="dashboard">
+
+    <div class="top">
+        <div>
+            <h2>Dashboard Monitoring</h2>
+            <p class="status" id="connectionStatus">
+                ● Menghubungkan database...
+            </p>
+            <p class="unit" id="lastUpdate">Menunggu data...</p>
+        </div>
+
+        <button id="logoutButton">Logout</button>
+    </div>
+
+    <!-- KARTU DATA -->
+    <div class="cards">
+
+        <div class="card">
+            <h3>Nilai Sensor Gas</h3>
+            <div class="value" id="gasValue">--</div>
+            <span class="unit">Nilai pembacaan sensor</span>
+        </div>
+
+        <div class="card">
+            <h3>Kondisi Gas</h3>
+            <div class="condition" id="gasCondition">--</div>
+        </div>
+
+        <div class="card">
+            <h3>Temperatur</h3>
+            <div class="value" id="temperature">--</div>
+            <span class="unit">°C</span>
+        </div>
+
+        <div class="card">
+            <h3>Kelembapan</h3>
+            <div class="value" id="humidity">--</div>
+            <span class="unit">%</span>
+        </div>
+
+    </div>
+
+    <!-- GRAFIK -->
+    <div class="panel">
+        <h2>Grafik Riwayat Sensor Gas</h2>
+        <p class="unit">Data pembacaan dari Firebase Realtime Database</p>
+
+        <div class="chart-container">
+            <canvas id="gasChart"></canvas>
+        </div>
+    </div>
+
+    <!-- TABEL RIWAYAT -->
+    <div class="panel">
+        <h2>Tabel Riwayat Akuisisi Data</h2>
+        <p class="unit">Rekaman hasil pembacaan sensor</p>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Gas</th>
+                        <th>Suhu (°C)</th>
+                        <th>Kelembapan (%)</th>
+                        <th>Kondisi</th>
+                        <th>Waktu (ms)</th>
+                    </tr>
+                </thead>
+
+                <tbody id="historyTableBody">
+                    <tr>
+                        <td colspan="6">Menunggu data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- INFORMASI -->
+    <div class="panel">
+        <h2>Informasi Sistem</h2>
+        <div class="info">
+            <p>Perangkat: ESP32</p>
+            <p>Database: Firebase Realtime Database</p>
+            <p>Metode: Akuisisi Data Sensor</p>
+            <p>Jalur data: gas_sensor</p>
+            <p>Riwayat data: historyDataGas</p>
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    Instrumentasi Elektronika | 2026
+</footer>
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    onAuthStateChanged,
+    signOut
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import {
+    getDatabase,
+    ref,
+    onValue
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// KONFIGURASI FIREBASE
+const firebaseConfig = {
+    apiKey: "AIzaSyC6FaBio8w4y5Vbk4JhMAy2BGaX5dH-Ohg",
+    authDomain: "monitoring-kualitas-udar-ce4f2.firebaseapp.com",
+    databaseURL: "https://monitoring-kualitas-udar-ce4f2-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "monitoring-kualitas-udar-ce4f2",
+    storageBucket: "monitoring-kualitas-udar-ce4f2.firebasestorage.app",
+    messagingSenderId: "711785627882",
+    appId: "1:711785627882:web:fcbca954cb534754c65793",
+    measurementId: "G-Q8JWX2CKE0"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const database = getDatabase(app);
+
+let unsubscribeGas = null;
+let unsubscribeHistory = null;
+let gasChart = null;
+
+// LOGIN
+document.getElementById("loginButton").addEventListener("click", async () => {
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const message = document.getElementById("loginMessage");
+
+    if (!email || !password) {
+        message.textContent = "Email dan password harus diisi.";
+        return;
+    }
+
+    message.textContent = "Sedang login...";
+
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+        message.textContent = "";
+    } catch (error) {
+        message.textContent = "Login gagal: " + error.message;
+    }
+});
+
+// STATUS LOGIN
+onAuthStateChanged(auth, (user) => {
+
+    if (user) {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        startMonitoring();
+    } else {
+        document.getElementById("dashboard").style.display = "none";
+        document.getElementById("loginBox").style.display = "block";
+        stopMonitoring();
+    }
+});
+
+// MONITORING FIREBASE
+function startMonitoring() {
+
+    document.getElementById("connectionStatus").textContent =
+        "● Menghubungkan database...";
+
+    // DATA SENSOR TERBARU
+    unsubscribeGas = onValue(
+        ref(database, "gas_sensor"),
+
+        (snapshot) => {
+
+            const data = snapshot.val();
+
+            if (!data) return;
+
+            document.getElementById("gasValue").textContent =
+                data.value ?? "--";
+
+            const conditionElement =
+                document.getElementById("gasCondition");
+
+            const condition = data.condition ?? "--";
+
+            conditionElement.textContent = condition;
+
+            conditionElement.className = "condition";
+
+            if (condition === "NORMAL") {
+                conditionElement.classList.add("normal");
+            } else if (condition === "PERLU DIPERIKSA") {
+                conditionElement.classList.add("warning");
+            } else {
+                conditionElement.classList.add("danger");
+            }
+
+            document.getElementById("connectionStatus").textContent =
+                "● Database terhubung";
+
+            document.getElementById("lastUpdate").textContent =
+                "Pembaruan terakhir: " + new Date().toLocaleString("id-ID");
+        },
+
+        (error) => {
+            document.getElementById("connectionStatus").textContent =
+                "Gagal membaca data gas: " + error.message;
+        }
+    );
+
+    // RIWAYAT SENSOR
+    unsubscribeHistory = onValue(
+        ref(database, "historyDataGas"),
+
+        (snapshot) => {
+
+            const history = snapshot.val();
+
+            if (!history) return;
+
+            const records = Object.entries(history)
+                .map(([id, item]) => ({id, ...item}))
+                .sort((a, b) => a.id.localeCompare(b.id));
+
+            const latest = records[records.length - 1];
+
+            if (latest) {
+                document.getElementById("temperature").textContent =
+                    latest.suhu ?? "--";
+
+                document.getElementById("humidity").textContent =
+                    latest.kelembapan ?? "--";
+            }
+
+            updateChart(records.slice(-20));
+            updateTable(records.slice(-20));
+        },
+
+        (error) => {
+            document.getElementById("connectionStatus").textContent =
+                "Gagal membaca riwayat: " + error.message;
+        }
+    );
+}
+
+// GRAFIK
+function updateChart(records) {
+
+    const labels = records.map((item, index) => "Data " + (index + 1));
+    const values = records.map(item => Number(item.value));
+
+    if (gasChart) {
+        gasChart.data.labels = labels;
+        gasChart.data.datasets[0].data = values;
+        gasChart.update();
+        return;
+    }
+
+    gasChart = new Chart(document.getElementById("gasChart"), {
+
+        type: "line",
+
+        data: {
+            labels: labels,
+
+            datasets: [{
+                label: "Nilai Sensor Gas",
+                data: values,
+                borderColor: "#2563eb",
+                backgroundColor: "#2563eb20",
+                fill: true,
+                tension: 0.3
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: "Nilai Sensor"
+                    }
+                }
+            }
+        }
+    });
+}
+
+// TABEL RIWAYAT
+function updateTable(records) {
+
+    const tableBody = document.getElementById("historyTableBody");
+    tableBody.innerHTML = "";
+
+    records.slice().reverse().forEach((item, index) => {
+
+        const row = document.createElement("tr");
+
+        const values = [
+            index + 1,
+            item.value ?? "--",
+            item.suhu ?? "--",
+            item.kelembapan ?? "--",
+            item.condition ?? "--",
+            item.waktu_ms ?? "--"
+        ];
+
+        values.forEach(value => {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            row.appendChild(cell);
+        });
+
+    tableBody.appendChild(row);
+    });
+}
+
+// STOP MONITORING
+function stopMonitoring() {
+
+    if (unsubscribeGas) {
+        unsubscribeGas();
+        unsubscribeGas = null;
+    }
+
+    if (unsubscribeHistory) {
+        unsubscribeHistory();
+        unsubscribeHistory = null;
+    }
+
+    if (gasChart) {
+        gasChart.destroy();
+        gasChart = null;
+    }
+}
+
+// LOGOUT
+document.getElementById("logoutButton").addEventListener("click", async () => {
+    await signOut(auth);
+});
+
+</script>
+
+</body>
+</html>
